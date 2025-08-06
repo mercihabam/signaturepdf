@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-06-13 15:05+0200\n"
-"PO-Revision-Date: 2025-06-04 18:09+0000\n"
+"POT-Creation-Date: 2025-08-04 13:21+0200\n"
+"PO-Revision-Date: 2025-07-25 22:06+0000\n"
 "Last-Translator: xabirequejo <xabi.rn@gmail.com>\n"
 "Language-Team: Basque <https://hosted.weblate.org/projects/signature-pdf/"
 "application/eu/>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 5.12-dev\n"
+"X-Generator: Weblate 5.13-dev\n"
 
 msgid "en"
 msgstr "eu"
@@ -133,7 +133,13 @@ msgid "Sign with the server certificate"
 msgstr "Sinatu zerbitzariko ziurtagiriarekin"
 
 msgid "Add a watermark"
+msgstr "Gehitu filigrana"
+
+msgid "New"
 msgstr ""
+
+msgid "Redact areas"
+msgstr "Ezabatu eremuak"
 
 msgid "Organize PDFs"
 msgstr "Antolatu PDFak"
@@ -150,8 +156,14 @@ msgstr "Erauzi orriak"
 msgid "Rotate pages"
 msgstr "Biratu orriak"
 
+msgid "Change or standardize the paper size"
+msgstr "Aldatu edo estandarizatu paperaren neurria"
+
 msgid "Delete pages"
 msgstr "Ezabatu orriak"
+
+msgid "Generate a booklet"
+msgstr ""
 
 msgid "Convert images to PDF"
 msgstr "Bihurtu irudiak PDFra"
@@ -247,9 +259,15 @@ msgstr "%s Erauzi eta deskargatu"
 msgid "%s Cancel selection"
 msgstr "%s Utzi hautaketa"
 
+msgid "Printing options"
+msgstr "Inprimatzeko aukerak"
+
 #, php-format
 msgid "%s Download the full PDF"
 msgstr "%s Deskargatu PDF osoa"
+
+msgid "Download the selection"
+msgstr "Deskargatu hautaketa"
 
 msgid "No"
 msgstr "Ez"
@@ -264,11 +282,44 @@ msgstr "Utzi"
 msgid "%s Turn"
 msgstr "%s Biratu"
 
-msgid "Download the selection"
-msgstr "Deskargatu hautaketa"
-
 msgid "PDF documents"
 msgstr "PDF dokumentuak"
+
+msgid "Close"
+msgstr "Itxi"
+
+msgid "Original format"
+msgstr "Jatorrizko formatua"
+
+msgid "Most common formats"
+msgstr "Formatu erabilienak"
+
+msgid "Other formats"
+msgstr "Beste formatu batzuk"
+
+msgid "Custom"
+msgstr ""
+
+msgid "Paper size"
+msgstr "Paperaren neurria"
+
+msgid "Width"
+msgstr ""
+
+msgid "Height"
+msgstr ""
+
+msgid "Unit"
+msgstr ""
+
+msgid "Normal"
+msgstr ""
+
+msgid "Booklet"
+msgstr ""
+
+msgid "Formatting"
+msgstr ""
 
 msgid "Sign, initial, stamp, complete a document"
 msgstr "Sinatu, idatzi inizialak, zigilatu, osatu dokumentua"
@@ -338,8 +389,11 @@ msgstr "Zirrimarra"
 msgid "%s Check box"
 msgstr "%s Kontrol-laukia"
 
+msgid "Redaction area"
+msgstr "Ezabatzeko eremua"
+
 msgid "Watermark"
-msgstr ""
+msgstr "Filigrana"
 
 #, php-format
 msgid "%s Create an element"
@@ -351,6 +405,9 @@ msgstr "%s Partekatu %s pertsona batek baino gehiagok sinatzeko"
 
 msgid "Download the signed PDF"
 msgstr "Deskargatu sinatutako PDFa"
+
+msgid "The PDF will be flattened"
+msgstr "PDFa lautuko da"
 
 #, php-format
 msgid "You are %s to have signed this PDF"
@@ -470,9 +527,6 @@ msgstr ""
 "Sinatzaile bakoitzak sinatutako PDFaren azken bertsioa deskargatu dezake "
 "edozein unetan."
 
-msgid "Close"
-msgstr "Itxi"
-
 msgid "Signed PDF"
 msgstr "Sinatutako PDFa"
 
@@ -503,6 +557,24 @@ msgstr ""
 "Kaixo,\n"
 "\n"
 "Dokumentua (%s) sinatu berri dut: %s"
+
+msgid "Change the color of the selected element"
+msgstr "Aldatu hautatutako elementuaren kolorea"
+
+msgid "Duplicate the element"
+msgstr "Bikoiztu elementua"
+
+msgid "Duplicate on each page"
+msgstr "Bikoiztu orri bakoitzean"
+
+msgid "Duplicate"
+msgstr "Bikoiztu"
+
+msgid "Delete the element"
+msgstr "Ezabatu elementua"
+
+msgid "Are you sure you want to delete this PDF and the associated signatures?"
+msgstr "Ziur PDF hau eta erlazionatutako sinadurak ezabatu nahi dituzula?"
 
 msgid "Text to modify"
 msgstr "Moldatzeko testua"

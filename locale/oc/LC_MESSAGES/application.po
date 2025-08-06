@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-06-13 15:05+0200\n"
-"PO-Revision-Date: 2025-06-02 05:44+0000\n"
+"POT-Creation-Date: 2025-08-04 13:21+0200\n"
+"PO-Revision-Date: 2025-08-05 21:02+0000\n"
 "Last-Translator: Quentin PAGÈS <quentinantonin@free.fr>\n"
 "Language-Team: Occitan <https://hosted.weblate.org/projects/signature-pdf/"
 "application/oc/>\n"
@@ -17,7 +17,7 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
-"X-Generator: Weblate 5.12-dev\n"
+"X-Generator: Weblate 5.13-dev\n"
 
 msgid "en"
 msgstr "oc"
@@ -128,7 +128,13 @@ msgid "Sign with the server certificate"
 msgstr "Signar amb lo certificat del servidor"
 
 msgid "Add a watermark"
-msgstr ""
+msgstr "Apondre una filigrana"
+
+msgid "New"
+msgstr "Nòu"
+
+msgid "Redact areas"
+msgstr "Enfosquir zònas"
 
 msgid "Organize PDFs"
 msgstr "Organizar de PDF"
@@ -145,8 +151,14 @@ msgstr "Traire de paginas"
 msgid "Rotate pages"
 msgstr "Pivotar las paginas"
 
+msgid "Change or standardize the paper size"
+msgstr "Modificar o estandardizar la talha del papièr"
+
 msgid "Delete pages"
 msgstr "Suprimir de paginas"
+
+msgid "Generate a booklet"
+msgstr "Generar un libret"
 
 msgid "Convert images to PDF"
 msgstr "Convertir d’imatges en PDF"
@@ -242,9 +254,15 @@ msgstr "%s Extraire e telecargar"
 msgid "%s Cancel selection"
 msgstr "%s Anullar la seleccion"
 
+msgid "Printing options"
+msgstr "Opcions d'impression"
+
 #, php-format
 msgid "%s Download the full PDF"
 msgstr "%s Telecargar lo PDF complèt"
+
+msgid "Download the selection"
+msgstr "Telecargar la seleccion"
 
 msgid "No"
 msgstr "Non"
@@ -259,11 +277,44 @@ msgstr "Anullar"
 msgid "%s Turn"
 msgstr "%s Virar"
 
-msgid "Download the selection"
-msgstr "Telecargar la seleccion"
-
 msgid "PDF documents"
 msgstr "Documents PDF"
+
+msgid "Close"
+msgstr "Tampar"
+
+msgid "Original format"
+msgstr "Format original"
+
+msgid "Most common formats"
+msgstr "Formats mai comuns"
+
+msgid "Other formats"
+msgstr "Autres formats"
+
+msgid "Custom"
+msgstr "Personalizat"
+
+msgid "Paper size"
+msgstr "Talha del papièr"
+
+msgid "Width"
+msgstr "Largor"
+
+msgid "Height"
+msgstr "Nautor"
+
+msgid "Unit"
+msgstr "Unitat"
+
+msgid "Normal"
+msgstr "Normala"
+
+msgid "Booklet"
+msgstr "Libret"
+
+msgid "Formatting"
+msgstr "Formatatge"
 
 msgid "Sign, initial, stamp, complete a document"
 msgstr "Signar, parafar, sagelar, completar un document"
@@ -335,8 +386,11 @@ msgstr "Raiar"
 msgid "%s Check box"
 msgstr "%s Cassa de marcar"
 
+msgid "Redaction area"
+msgstr "Zòna enfosquida"
+
 msgid "Watermark"
-msgstr ""
+msgstr "Filigrana"
 
 #, php-format
 msgid "%s Create an element"
@@ -348,6 +402,9 @@ msgstr "%s Partejar per signar %s amb mantuna persona"
 
 msgid "Download the signed PDF"
 msgstr "Telecargar lo PDF signat"
+
+msgid "The PDF will be flattened"
+msgstr "Lo PDF serà esplatussat"
 
 #, php-format
 msgid "You are %s to have signed this PDF"
@@ -468,9 +525,6 @@ msgstr ""
 "Cada signatari poirà a tot moment telecargar la darrièra version del PDF "
 "signat."
 
-msgid "Close"
-msgstr "Tampar"
-
 msgid "Signed PDF"
 msgstr "PDF signat"
 
@@ -499,6 +553,25 @@ msgstr ""
 "Bonjorn,\n"
 "\n"
 "Veni de signar lo document (%s) : %s"
+
+msgid "Change the color of the selected element"
+msgstr "Cambiar la color de l'element seleccionat"
+
+msgid "Duplicate the element"
+msgstr "Duplicar l'element"
+
+msgid "Duplicate on each page"
+msgstr "Duplicar sus cada pagina"
+
+msgid "Duplicate"
+msgstr "Duplicar"
+
+msgid "Delete the element"
+msgstr "Suprimir l'element"
+
+msgid "Are you sure you want to delete this PDF and the associated signatures?"
+msgstr ""
+"Volètz vertadièrament suprimir aqueste PDF e las signaturas associadas ?"
 
 msgid "Text to modify"
 msgstr "Tèxt de modificar"

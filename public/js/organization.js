@@ -23,6 +23,7 @@ if(is_mobile()) {
 
 let nbPDF = 0;
 let pages = [];
+let formats = [];
 let pdfRenderTasks = [];
 
 async function loadPDF(pdfBlob, filename, pdfIndex) {
@@ -47,7 +48,15 @@ async function loadPDF(pdfBlob, filename, pdfIndex) {
             pdf.getPage(pageNumber).then(function(page) {
                 let pageIndex = pdfLetter + "_" + (page.pageNumber - 1);
                 pages[pageIndex] = page;
+                const viewportFormat = page.getViewport({ scale: 1 });
+                const format = findFormat(viewportFormat.width, viewportFormat.height);
+                const formatLibelle = getLibelleFormat(format);
 
+                if(!formats[format]) {
+                    formats[format] = []
+                }
+                formats[format].push(pageIndex);
+                let pageTitle = trad['Page'] + ' ' + page.pageNumber + ' - ' + formatLibelle + ' - ' + filename;
                 let pageHTML = '<div class="position-relative mt-0 ms-1 me-0 mb-1 canvas-container d-flex align-items-center justify-content-center bg-transparent bg-opacity-25 border border-2 border-transparent" id="canvas-container-' + pageIndex +'" draggable="true">';
                     pageHTML += '<canvas class="canvas-pdf shadow-sm"></canvas>';
                     pageHTML += '<div title="' + trad['Select this page'] + '" class="position-absolute top-0 start-50 translate-middle-x p-2 ps-3 pe-3 mt-2 rounded-circle btn-select d-none"><i class="bi bi-check-square"></i></div>';
@@ -57,7 +66,7 @@ async function loadPDF(pdfBlob, filename, pdfIndex) {
                     pageHTML += '<div title="' + trad['Move here'] + '" class="position-absolute start-50 top-50 translate-middle p-2 ps-4 pe-4 container-resize btn-drag-here d-none"><i class="bi bi-arrows-expand-vertical"></i></div>';
                     pageHTML += '<div title="' + trad['Turn this page'] + '" class="position-absolute top-50 end-0 translate-middle-y p-2 ps-3 pe-3 me-2 rounded-circle container-rotate btn-rotate d-none"><i class="bi bi-arrow-clockwise"></i></div>';
                     pageHTML += '<div title="' + trad['Download this page'] + '" class="position-absolute bottom-0 start-50 translate-middle-x p-2 ps-3 pe-3 mb-3 rounded-circle btn-download d-none"><i class="bi bi-download"></i></div>';
-                    pageHTML += '<p class="page-title position-absolute text-center w-100 ps-2 pe-2 pb-0 pt-0 mb-1 bg-white opacity-75 d-none" style="bottom: -4px; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">' + trad['Page'] + ' ' + page.pageNumber + ' - ' + filename + '</p>';
+                    pageHTML += '<p class="page-title position-absolute text-center w-100 ps-2 pe-2 pb-0 pt-0 mb-1 bg-white opacity-75 d-none" style="bottom: -4px; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;">' + pageTitle + '</p>';
                     pageHTML += '<input form="form_pdf" class="checkbox-page d-none" role="switch" type="checkbox" checked="checked" value="'+pdfLetter+page.pageNumber+'" />';
                     pageHTML += '<input type="hidden" class="input-rotate" value="0" id="input_rotate_'+pageIndex+'" />';
                     pageHTML += '<input type="checkbox" class="input-select d-none" value="'+pdfLetter+page.pageNumber+'" id="input_select_'+pageIndex+'" />';
@@ -67,7 +76,10 @@ async function loadPDF(pdfBlob, filename, pdfIndex) {
 
                 document.getElementById('container-pages').insertAdjacentHTML('beforeend', pageHTML);
 
+                document.querySelector('#input_rotate_'+pageIndex).value = page.rotate;
+
                 let canvasContainer = document.getElementById('canvas-container-' + pageIndex);
+                canvasContainer.title = pageTitle;
                 canvasContainer.addEventListener('click', function(e) {
                     canvasContainer.querySelector('.btn-select').click();
                 });
@@ -92,7 +104,7 @@ async function loadPDF(pdfBlob, filename, pdfIndex) {
                     this.querySelector('.container-resize').classList.add('d-none');
                     this.querySelector('.canvas-pdf').classList.add('shadow-lg');
                     this.querySelector('.canvas-pdf').style.border = '2px dashed #777';
-                    e.dataTransfer.setData('element', this.id);
+                    e.dataTransfer.setData(this.id.replace('canvas-container-', ''), '');
                     this.style.opacity = 0.4;
                 });
                 canvasContainer.addEventListener('dragend', function(e) {
@@ -107,8 +119,7 @@ async function loadPDF(pdfBlob, filename, pdfIndex) {
                         e.preventDefault();
                     }
                     let pdfOver = this;
-                    let pdfMoving = document.querySelector('#'+e.dataTransfer.getData('element'));
-
+                    let pdfMoving = document.querySelector('#canvas-container-'+e.dataTransfer.types[0].toUpperCase());
                     if(pdfOver.id == pdfMoving.id) {
 
                         return;
@@ -214,6 +225,7 @@ async function pageRender(pageIndex) {
       scrollWidth = -4;
   }
   let page = pages[pageIndex];
+
   let rotation = parseInt(document.querySelector('#input_rotate_'+pageIndex).value);
   let viewport = page.getViewport({scale: 1, rotation: rotation});
   let sizeWidth = Math.floor((document.getElementById('container-pages').offsetWidth - (8*(nbPagePerLine+1)) - scrollWidth) / nbPagePerLine);
@@ -244,6 +256,8 @@ async function pageRender(pageIndex) {
     canvasContext: context,
     viewport: viewport,
   });
+
+  updateFormats();
 }
 
 function getFileIndex(page) {
@@ -279,7 +293,7 @@ function updateListePDF() {
     for (var i = 0; i < nbFiles; i++) {
         let pdfLetter = getLetter(i);
         const pdfFile = document.querySelector('#input_pdf').files.item(i);
-        document.querySelector('#list_pdf').insertAdjacentHTML('beforeend', '<li id="file_' + pdfLetter + '" class="list-group-item small ps-2 pe-5" title="'+decodeURI(pdfFile.name)+'" style="text-overflow: ellipsis; white-space: nowrap; overflow: hidden;"><i class="bi bi-files"></i><span class="ms-2">'+decodeURI(pdfFile.name)+'</span> <input class="form-check-input float-end position-absolute file-list-checkbox" type="checkbox" /> </li>');
+        document.querySelector('#list_pdf').insertAdjacentHTML('beforeend', '<li id="file_' + pdfLetter + '" class="list-group-item small ps-2 pe-5" title="'+decodeURI(pdfFile.name)+'" style="text-overflow: ellipsis; white-space: nowrap; overflow: hidden;"><i class="bi bi-files"></i><label class="ms-2" style="cursor: pointer; display: inline;" for="file_' + pdfLetter + '_name">'+decodeURI(pdfFile.name)+'</label> <input id="file_' + pdfLetter + '_name" class="form-check-input float-end position-absolute file-list-checkbox" type="checkbox" /> </li>');
         let fileItem = document.querySelector('#file_' + pdfLetter);
         fileItem.querySelector('input[type=checkbox]').addEventListener('change', function(e) {
             document.querySelectorAll('.canvas-container').forEach(function(page) {
@@ -296,6 +310,89 @@ function updateListePDF() {
         }
     }
     updateGlobalState();
+}
+
+function updateFormats() {
+    const selectFormat = document.querySelector('#select_paper_format');
+    const selectFormatOptionCurrent = document.querySelector('#select_paper_format_current');
+    let formatsLabel = [];
+    for(format in formats) {
+        formatsLabel.push(getLibelleFormat(format));
+    }
+    document.querySelector('#input_paper_width').parentNode.classList.add('opacity-75');
+    document.querySelector('#input_paper_height').parentNode.classList.add('opacity-75');
+    document.querySelector('#select_size_unit').parentNode.classList.add('opacity-75');
+
+    selectFormatOptionCurrent.innerText = formatsLabel.join(', ');
+    if(selectFormat.value == "custom") {
+        document.querySelector('#bloc_size').classList.remove('d-none');
+        document.querySelector('#bloc_size').nextElementSibling.classList.remove('d-none');
+        document.querySelector('#select_paper_format').selectedOptions[0].text = "Custom";
+        if(document.querySelector('#input_paper_width').value && document.querySelector('#input_paper_height').value && document.querySelector("#select_size_unit").value) {
+            document.querySelector('#select_paper_format').selectedOptions[0].text += " ("+document.querySelector('#input_paper_width').value+" x "+ document.querySelector('#input_paper_height').value + " " + document.querySelector("#select_size_unit").value + ")"
+        }
+        document.querySelector('#input_paper_width').parentNode.classList.remove('opacity-75');
+        document.querySelector('#input_paper_height').parentNode.classList.remove('opacity-75');
+        document.querySelector('#select_size_unit').parentNode.classList.remove('opacity-75');
+    } else {
+        document.querySelector('#bloc_size').nextElementSibling.classList.add('d-none');
+        document.querySelector('#bloc_size').classList.add('d-none');
+        document.querySelector('#select_paper_format option[value="custom"]').text = "Custom"
+    }
+    document.querySelector('#printable_paper_size_infos').innerText = selectFormat.selectedOptions[0].text;
+    document.querySelector('#printable_paper_size_infos').classList.add('text-muted');
+    document.querySelector('#printable_paper_size_infos').classList.remove('fw-bold');
+
+    if(!selectFormat.value) {
+        document.querySelector('#input_paper_width').disabled = true;
+        document.querySelector('#input_paper_height').disabled = true;
+        document.querySelector('#select_size_unit').disabled = true;
+        document.querySelector('#input_paper_width').value = null;
+        document.querySelector('#input_paper_height').value = null;
+        document.querySelector('#select_size_unit').value = null;
+    }
+    if(selectFormat.value) {
+        document.querySelector('#printable_paper_size_infos').classList.remove('text-muted');
+        document.querySelector('#printable_paper_size_infos').classList.add('fw-bold');
+        document.querySelector('#input_paper_width').disabled = false;
+        document.querySelector('#input_paper_height').disabled = false;
+        document.querySelector('#select_size_unit').disabled = false;
+    }
+    if(selectFormat.value && selectFormat.value.match(/[0-9\.]+x[0-9\.]+x/)) {
+        document.querySelector('#input_paper_width').value = selectFormat.value.split('x')[0];
+        document.querySelector('#input_paper_height').value = selectFormat.value.split('x')[1];
+        document.querySelector('#select_size_unit').value = selectFormat.value.split('x')[2];
+    }
+
+    document.querySelector('#printable_paper_size_infos').title = document.querySelector('#printable_paper_size_infos').innerText;
+
+    document.querySelector('#printable_formatting_infos').innerText = null;
+    if(document.querySelector('#select_formatting').value) {
+        document.querySelector('#printable_formatting_infos').innerText = document.querySelector('#select_formatting').selectedOptions[0].text;
+    }
+}
+
+function findFormat(pointWidth, pointHeight) {
+    const format_in = points2unit(pointWidth, 'in')+'x'+points2unit(pointHeight, 'in')+'xin'
+
+    if(document.querySelector('#select_paper_format option[value="'+format_in+'"]')) {
+
+        return format_in;
+    }
+
+    const format_mm = points2unit(pointWidth, 'mm')+'x'+points2unit(pointHeight, 'mm')+'xmm'
+
+    return format_mm;
+}
+
+function getLibelleFormat(format) {
+    if(document.querySelector('#select_paper_format option[value="'+format+'"]')) {
+        return document.querySelector('#select_paper_format option[value="'+format+'"]').innerText
+    }
+
+    const splitFormat = format.split('x');
+
+    return splitFormat[0] + ' x ' + splitFormat[1] + ' ' + splitFormat[2];
 }
 
 function getPagesSelected() {
@@ -462,9 +559,9 @@ function updateFilesState() {
         let fileStat = filesStats[fileIndex];
         checkbox.checked = (fileStat.nbPageSelected > 0 && fileStat.nbPageSelected == fileStat.nbPage);
         checkbox.indeterminate = (fileStat.nbPageSelected > 0 && fileStat.nbPageSelected < fileStat.nbPage);
-        document.querySelector('#file_'+fileIndex+' span').classList.remove('text-primary');
+        document.querySelector('#file_'+fileIndex+' label').classList.remove('text-primary');
         if(fileStat.nbPageSelected > 0) {
-            document.querySelector('#file_'+fileIndex+' span').classList.add('text-primary');
+            document.querySelector('#file_'+fileIndex+' label').classList.add('text-primary');
         }
     }
 }
@@ -489,7 +586,8 @@ function updateGlobalState() {
     document.querySelector('#top_bar_action_selection').classList.add('d-none');
     document.querySelector('#bottom_bar_action').classList.remove('d-none');
     document.querySelector('#bottom_bar_action_selection').classList.add('d-none');
-    document.querySelector('#save').removeAttribute('disabled');
+    document.querySelector('#save').classList.remove('d-none');
+    document.querySelector('#save_select').classList.add('d-none');
 
     if(isSelectionMode()) {
         document.querySelector('#container_btn_select .card-header span').innerText = document.querySelectorAll('.canvas-container .input-select:checked').length;
@@ -511,7 +609,8 @@ function updateGlobalState() {
         document.querySelector('#top_bar_action').classList.add('d-none');
         document.querySelector('#bottom_bar_action_selection').classList.remove('d-none');
         document.querySelector('#bottom_bar_action').classList.add('d-none');
-        document.querySelector('#save').setAttribute('disabled', 'disabled');
+        document.querySelector('#save').classList.add('d-none');
+        document.querySelector('#save_select').classList.remove('d-none');
     }
 }
 
@@ -556,7 +655,6 @@ async function saveAll() {
 async function save(order) {
     const PDFDocument = window['PDFLib'].PDFDocument
     const Rotation = window['PDFLib'].Rotation
-
     const pdf = await PDFDocument.load(await document.querySelector('#input_pdf').files.item(0).arrayBuffer(), { ignoreEncryption: true, password: "", updateMetadata: false });
 
     let filename = "";
@@ -600,13 +698,148 @@ async function save(order) {
         if(rotation) {
             pdfPage.setRotation(window['PDFLib'].degrees(parseInt(rotation)));
         }
+        if(document.querySelector('#input_paper_width').value && document.querySelector('#input_paper_height').value, document.querySelector('#select_size_unit').value) {
+            let unit = document.querySelector('#select_size_unit').value;
+            let width = unit2points(parseFloat(document.querySelector('#input_paper_width').value), unit);
+            let height = unit2points(parseFloat(document.querySelector('#input_paper_height').value), unit);
+            if(document.querySelector('#select_paper_format').value != "custom" && pdfPage.getHeight() > pdfPage.getWidth()) {
+                resizePage(pdfPage, Math.min(height, width), Math.max(height, width));
+            } else {
+                resizePage(pdfPage, Math.max(height, width), Math.min(height, width));
+            }
+        }
         pdf.addPage(pdfPage);
     }
 
-    cleanPDF(pdf);
+    if(document.querySelector('#select_formatting').value == "booklet") {
+        const orgaPages = [];
+        const nbPages = Math.ceil(pdf.getPages().length / 4) * 2;
 
-    const newPDF = new Blob([await pdf.save()], {type: "application/pdf"});
+        const pageWidth = pdf.getPages()[0].getWidth();
+        const pageHeight = pdf.getPages()[0].getHeight();
+
+        const pdfBooklet = await window['PDFLib'].PDFDocument.create();
+        for(let i = nbPages; i > 0; i--) {
+            let pages = [i, 2 * nbPages - i + 1];
+            if(i % 2) {
+                orgaPages.push(pages.reverse());
+            } else {
+                orgaPages.push(pages);
+            }
+        }
+        for(pages of orgaPages.reverse()) {
+            await merge2Pages(pdfBooklet, pdf.getPages()[pages[0] - 1], pdf.getPages()[pages[1] - 1], pageWidth, pageHeight)
+        }
+        let newPDF = new Blob([await pdfBooklet.save()], {type: "application/pdf"});
+
+        await download(newPDF, filename+".pdf");
+        return;
+    }
+
+    cleanPDF(pdf);
+    let newPDF = new Blob([await pdf.save()], {type: "application/pdf"});
     await download(newPDF, filename+".pdf");
+    await storeFileInCache(newPDF, filename+'.pdf');
+}
+
+function unit2points(value, unit) {
+    if(unit == 'mm') {
+
+        return mm2points(value);
+    }
+
+    if(unit == 'in') {
+
+        return in2points(value);
+    }
+
+    return value;
+}
+
+function mm2points(mm) {
+
+    return mm * 72 / 25.4;
+}
+
+function in2points(inch) {
+
+    return inch * 72;
+}
+
+function points2unit(value, unit) {
+    if(unit == 'mm') {
+
+        return points2mm(value);
+    }
+
+    if(unit == 'in') {
+
+        return points2in(value);
+    }
+
+    return value;
+}
+
+function points2mm(points) {
+
+    return Math.round(points * 25.4 / 72);
+}
+
+function points2in(points) {
+
+    return Math.round(points / 72 * 10) / 10;
+}
+
+async function merge2Pages(pdf, pageA, pageB, pageWidth, pageHeight) {
+    const newPageWidth =  Math.max(pageWidth, pageHeight);
+    const newPageHeight =  Math.min(pageWidth, pageHeight);
+    const page = pdf.addPage([newPageWidth, newPageHeight]);
+    if(pageA) {
+        resizePage(pageA, newPageWidth / 2, newPageHeight);
+        await embedPage(pdf, page, pageA, 0, 0);
+    }
+    if(pageB) {
+        resizePage(pageB, newPageWidth / 2, newPageHeight);
+        await embedPage(pdf, page, pageB, newPageWidth / 2, 0);
+    }
+}
+
+function resizePage(page, newWidth, newHeight) {
+    const oldWidth = page.getSize().width;
+    const oldHeight = page.getSize().height;
+
+    // Calcul des facteurs d’échelle
+    const scaleX = newWidth / oldWidth;
+    const scaleY = newHeight / oldHeight;
+
+    // Utiliser le facteur le plus petit pour garder les proportions
+    const scale = Math.min(scaleX, scaleY);
+
+    // Définir la nouvelle taille
+    page.setSize(newWidth, newHeight);
+
+    // Calculer le décalage pour centrer le contenu
+    const offsetX = (newWidth - (oldWidth * scale)) / 2;
+    const offsetY = (newHeight - (oldHeight * scale)) / 2;
+
+    // Appliquer la transformation au contenu
+    page.scaleContent(scale, scale);
+    page.translateContent(offsetX, offsetY);
+}
+
+async function embedPage(pdf, page, pageToEmbed, x, y) {
+    const pageEmbedded = await pdf.embedPage(pageToEmbed, {
+        left: 0,
+        bottom: 0,
+        right: pageToEmbed.getWidth(),
+        top: pageToEmbed.getHeight(),
+    });
+    page.drawPage(pageEmbedded, {
+      width: pageEmbedded.width,
+      height: pageEmbedded.height,
+      x: x,
+      y: y,
+    });
 }
 
 function cleanPDF(pdf) {
@@ -683,17 +916,23 @@ function getPDFTags(node) {
 }
 
 function createEventsListener() {
-    document.getElementById('save-select_mobile').addEventListener('click', async function(event) {
+    document.getElementById('save_select_mobile').addEventListener('click', async function(event) {
         event.preventDefault();
-        startProcessingMode(document.getElementById('save-select_mobile'));
+        startProcessingMode(document.getElementById('save_select_mobile'));
         await saveAll();
-        endProcessingMode(document.getElementById('save-select_mobile'));
+        endProcessingMode(document.getElementById('save_select_mobile'));
     });
-    document.getElementById('save-select').addEventListener('click', async function(event) {
+    document.getElementById('btn_extract_select').addEventListener('click', async function(event) {
         event.preventDefault();
-        startProcessingMode(document.getElementById('save-select'));
+        startProcessingMode(document.getElementById('btn_extract_select'));
         await saveAll();
-        endProcessingMode(document.getElementById('save-select'));
+        endProcessingMode(document.getElementById('btn_extract_select'));
+    });
+    document.getElementById('save_select').addEventListener('click', async function(event) {
+        event.preventDefault();
+        startProcessingMode(document.getElementById('save_select'));
+        await saveAll();
+        endProcessingMode(document.getElementById('save_select'));
     });
     document.getElementById('save').addEventListener('click', async function(e) {
         e.preventDefault();
@@ -776,12 +1015,25 @@ function createEventsListener() {
         document.querySelector('#btn_liste_pdf').click();
     });
     document.querySelector('body').addEventListener('click', function(event) {
-        if(!event.originalTarget.classList.contains('offcanvas-header') && !event.originalTarget.classList.contains('offcanvas-body') && event.originalTarget.id != 'container-pages' && event.originalTarget.id != 'sidebarToolsLabel' && event.originalTarget.id != 'btn_container') {
+        if (!(event.target instanceof Element)) return;
+        if(!event.target.classList.contains('offcanvas-header') && !event.target.classList.contains('offcanvas-body') && event.target.id != 'container-pages' && event.target.id != 'sidebarTools' && event.target.id != 'sidebarToolsLabel' && event.target.id != 'btn_container') {
             return;
         }
         document.getElementById('btn_cancel_select').click();
     });
-
+    document.querySelector('#select_paper_format').addEventListener('change', function(event) {
+        updateFormats();
+    });
+    document.querySelector('#select_formatting').addEventListener('change', function(event) {
+        updateFormats();
+    });
+    document.querySelector('#bloc_size').addEventListener('change', function(event) {
+        if(!["input_paper_width", "input_paper_height", "select_size_unit"].includes(event.target.id)) {
+            return;
+        }
+        document.querySelector('#select_paper_format').value = "custom";
+        updateFormats();
+    });
 }
 
 async function uploadFromUrl(url) {
@@ -827,10 +1079,17 @@ async function pageOrganization() {
 };
 
 document.addEventListener('DOMContentLoaded', function () {
+    if(window.location.hash.match(/#booklet/)) {
+        document.querySelector('#select_formatting').value = "booklet";
+        document.querySelector('#demo_link').href = document.querySelector('#demo_link').href + '#booklet';
+    }
     if(window.location.hash && window.location.hash.match(/^\#http/)) {
-        let hashUrl = window.location.hash.replace(/^\#/, '');
+        let hashUrl = window.location.hash.replace('#booklet', '').replace(/^\#/, '');
         pageUpload();
         uploadFromUrl(hashUrl);
+    } else if (window.location.hash && canUseCache()) {
+        pageUpload()
+        loadFileFromCache('/pdf/'+window.location.hash.replace(/^\#/, ''));
     } else {
         pageUpload();
     }

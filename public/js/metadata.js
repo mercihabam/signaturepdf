@@ -22,50 +22,84 @@ function responsiveDisplay() {
 async function loadPDF(pdfBlob) {
     showLoading('Loading')
 
-    let filename = pdfBlob.name;
-    let url = await URL.createObjectURL(pdfBlob);
+    const filename = pdfBlob.name;
+    const url = URL.createObjectURL(pdfBlob);
     document.title = filename + ' - ' + document.title;
+    document.querySelector('#text_document_name span').innerText = filename;
 
     pdffile = pdfBlob
-    let loadingTask = pdfjsLib.getDocument(url);
-    document.querySelector('#text_document_name span').innerText = filename;
-    await loadingTask.promise.then(function(pdf) {
-        pdf.getMetadata().then(function(metadata) {
-            for(fieldKey in defaultFields) {
-                addMetadata(fieldKey, null, defaultFields[fieldKey]['type'], false);
+
+    const loadingTask = pdfjsLib.getDocument(url);
+    const pdf = await loadingTask.promise;
+    const metadata = await pdf.getMetadata()
+    const attachments = await pdf.getAttachments();
+
+    for(fieldKey in defaultFields) {
+        addMetadata(fieldKey, null, defaultFields[fieldKey]['type'], false);
+    }
+
+    for(metaKey in metadata.info) {
+        if(metaKey == "Custom" || metaKey == "PDFFormatVersion" || metaKey.match(/^Is/) || metaKey == "Trapped") {
+            continue;
+        }
+        addMetadata(metaKey, metadata.info[metaKey], "text", false);
+    }
+
+    for(metaKey in metadata.info.Custom) {
+        if(metaKey == "sha256") {
+            continue;
+        }
+
+        addMetadata(metaKey, metadata.info.Custom[metaKey], "text", false);
+    }
+
+    if (attachments) {
+        Object.entries(attachments).forEach(([_key, value]) => {
+            if (value.filename.startsWith('factur-x') === false) {
+                return
+            }
+            const decodedAttachment = new TextDecoder().decode(value.content)
+            const parser = new DOMParser();
+            const xml = parser.parseFromString(decodedAttachment, "application/xml")
+            const error = xml.querySelector('parseerror')
+            if (error) {
+                console.log(error)
+                return
             }
 
-            for(metaKey in metadata.info) {
-                if(metaKey == "Custom" || metaKey == "PDFFormatVersion" || metaKey.match(/^Is/) || metaKey == "Trapped") {
-                    continue;
+            const walker = xml.createTreeWalker(xml.firstChild, NodeFilter.SHOW_TEXT)
+            while(walker.nextNode()) {
+                const node = walker.currentNode
+
+                const treeKey = []
+                treeKey.push(node.parentNode.localName)
+
+                let root = node.parentNode
+                while (! (root.parentNode instanceof XMLDocument)) {
+                    root = root.parentNode
+                    treeKey.push(root.localName) // nodeName si on veut le namespace
                 }
-                addMetadata(metaKey, metadata.info[metaKey], "text", false);
-            }
 
-            for(metaKey in metadata.info.Custom) {
-                if(metaKey == "sha256") {
-                    continue;
-                }
+                const newInput = addMetadata(treeKey.join(' « '), node.textContent.trim(), "text", false, true)
+                newInput.dataset.fromAttachment = value.filename
+                newInput.disabled = true
+            }
+        })
+    }
 
-                addMetadata(metaKey, metadata.info.Custom[metaKey], "text", false);
-            }
-
-            for(let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++ ) {
-                pdf.getPage(pageNumber).then(function(page) {
-                    let pageIndex = (page.pageNumber - 1);
-                    pages[pageIndex] = page;
-                    pageRender(pageIndex);
-                });
-            }
-            if(document.querySelector('.input-metadata input')) {
-                document.querySelector('.input-metadata input').focus();
-            } else {
-                document.getElementById('input_metadata_key').focus();
-            }
+    for(let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++ ) {
+        pdf.getPage(pageNumber).then(function(page) {
+            let pageIndex = (page.pageNumber - 1);
+            pages[pageIndex] = page;
+            pageRender(pageIndex);
         });
-    }, function (reason) {
-        console.error(reason);
-    });
+    }
+
+    if(document.querySelector('.input-metadata input')) {
+        document.querySelector('.input-metadata input').focus();
+    } else {
+        document.getElementById('input_metadata_key').focus();
+    }
 
     endLoading();
 
@@ -81,14 +115,34 @@ async function pageRender(pageIndex) {
   let scaleWidth = sizeWidth / viewport.width;
   let viewportWidth = page.getViewport({scale: scaleWidth });
 
+  document.documentElement.style.setProperty('--scale-factor', scaleWidth) // needed to scale the textLayer
+                                                                           // to the canvas size (var used in style attribute)
+
   viewport = viewportWidth;
 
-  let canvasPDF = document.createElement('canvas');
-  canvasPDF.classList.add('shadow-sm');
-  document.getElementById('container-pages').appendChild(canvasPDF);
-  let context = canvasPDF.getContext('2d');
+  const containerPagePDF = document.createElement('div')
+  const canvasPDF = document.createElement('canvas')
+  const wrapperPDF = document.createElement('div')
+  const textPDF = document.createElement('div')
+
+  document.getElementById('container-pages').appendChild(containerPagePDF)
+  containerPagePDF.appendChild(wrapperPDF)
+  wrapperPDF.appendChild(canvasPDF)
+  wrapperPDF.appendChild(textPDF)
+
+  const context = canvasPDF.getContext('2d')
+
   canvasPDF.height = viewport.height;
   canvasPDF.width = viewport.width;
+  canvasPDF.classList.add('shadow-sm');
+
+  containerPagePDF.classList.add('page')
+  containerPagePDF.setAttribute('id', 'container-page-'+pageIndex)
+
+  wrapperPDF.classList.add('canvasWrapper');
+  wrapperPDF.style.position = 'relative'
+
+  textPDF.classList.add('textLayer')
 
   if(pdfRenderTasks[pageIndex]) {
     pdfRenderTasks[pageIndex].cancel();
@@ -97,19 +151,33 @@ async function pageRender(pageIndex) {
     canvasContext: context,
     viewport: viewport,
   });
+
+  pdfRenderTasks[pageIndex].promise.then(function () {
+    return page.getTextContent()
+  }).then(function (textContent) {
+      const textLayer = new pdfjsLib.TextLayer({
+          textContentSource: textContent,
+          viewport: viewport,
+          container: textPDF,
+      });
+
+      textLayer.render()
+  })
 }
 
-function addMetadata(key, value, type, focus) {
-    let input = document.querySelector('.input-metadata input[name="'+key+'"]');
+function addMetadata(key, value, type, focus, forceCreation = false) {
+    if (! forceCreation) {
+        let input = document.querySelector('.input-metadata input[name="'+key+'"]');
 
-    if(input && !input.value) {
-        input.value = value;
-    }
-    if(input && focus) {
-        input.focus();
-    }
-    if(input) {
-        return;
+        if(input && !input.value) {
+            input.value = value;
+        }
+        if(input && focus) {
+            input.focus();
+        }
+        if(input) {
+            return input;
+        }
     }
 
     let div = document.createElement('div');
@@ -137,6 +205,8 @@ function addMetadata(key, value, type, focus) {
     if(focus) {
         input.focus();
     }
+
+    return input
 }
 
 function deleteMetadata(el) {
@@ -172,6 +242,10 @@ async function save() {
     ([...document.getElementsByClassName('input-metadata')] || []).forEach(function (el) {
         const label = el.querySelector('label').innerText
         const input = el.querySelector('input').value
+
+        if ('fromAttachment' in el.querySelector('input').dataset) {
+            return;
+        }
 
         pdf.getInfoDict().set(PDFName.of(label), PDFHexString.fromText(input));
     });
@@ -254,8 +328,9 @@ async function pageUpload() {
     })
     document.getElementById('input_pdf_upload').addEventListener('change', async function(event) {
         if(await canUseCache()) {
-            storeFileInCache();
-            history.pushState({}, '', '/metadata#'+document.getElementById('input_pdf_upload').files[0].name);
+            const file = document.getElementById('input_pdf_upload').files[0]
+            storeFileInCache(file, file.name);
+            history.pushState({}, '', '/metadata#'+file.name);
         }
         pageMetadata(null);
     });
@@ -287,7 +362,9 @@ async function pageMetadata(url) {
     responsiveDisplay();
     createEventsListener();
     await convertInputFileImagesToPDF(document.getElementById('input_pdf_upload'));
-    loadPDF(document.getElementById('input_pdf_upload').files[0]);
+    await loadPDF(document.getElementById('input_pdf_upload').files[0]).catch(function (reason) {
+        console.error(reason);
+    });
 };
 
 

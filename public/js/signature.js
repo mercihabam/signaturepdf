@@ -21,6 +21,7 @@ let penColor = localStorage.getItem('penColor') ?? '#000000'
 let nblayers = null;
 let hasModifications = false;
 let currentTextScale = 1;
+const defaultScale = 1.5;
 
 async function loadPDF(pdfBlob) {
     let filename = pdfBlob.name;
@@ -133,6 +134,9 @@ async function loadPDF(pdfBlob) {
                   if (event.target instanceof fabric.Line) {
                       return;
                   }
+                  if (event.target instanceof fabric.Rect) {
+                      return;
+                  }
                   if(event.transform.action == "scaleX") {
                       event.target.scaleY = event.target.scaleX;
                   }
@@ -165,6 +169,23 @@ async function loadPDF(pdfBlob) {
                   }
 
                   toolBox.init(event.selected[0])
+              });
+              canvasEdition.on("selection:updated", function(event) {
+                  toolBox.reset()
+                  if (event.selected.length > 1 || event.selected.length === 0) {
+                      return;
+                  }
+
+                  toolBox.init(event.selected[0])
+              });
+              canvasEdition.on("object:modified", function(event) {
+                  toolBox.init(event.target)
+              });
+              canvasEdition.on("object:moving", function(event) {
+                  toolBox.reset()
+              });
+              canvasEdition.on("selection:cleared", function(event) {
+                  toolBox.reset()
               });
               canvasEditions.push(canvasEdition);
             });
@@ -273,7 +294,7 @@ function svgChange(input, event) {
 
     let input_selected = document.querySelector('input[name="svg_2_add"]:checked');
 
-    if(input_selected && !input_selected.value.match(/^data:/) && input_selected.value != "text" && input_selected.value != "strikethrough") {
+    if(input_selected && !input_selected.value.match(/^data:/) && input_selected.value != "text" && input_selected.value != "strikethrough" && input_selected.value != "rectangle") {
         input_selected = null;
     }
 
@@ -439,6 +460,9 @@ function deleteActiveObject() {
     canvasEditions.forEach(function(canvasEdition, index) {
         canvasEdition.getActiveObjects().forEach(function(activeObject) {
             canvasEdition.remove(activeObject);
+            if(activeObject.type == "rect") {
+                updateFlatten();
+            }
         });
     })
 };
@@ -467,6 +491,46 @@ function addObjectInCanvas(canvas, item) {
 
     return canvas.add(item);
 };
+
+function updateWatermark() {
+    if (document.querySelector('input[name=watermark]') === null) {
+        return
+    }
+
+    const text = new fabric.Text(document.querySelector('input[name=watermark]').value, {angle: -40, fill: document.querySelector("#watermark-color-picker").value, fontSize: 27 * currentScale})
+    text.scale = 0.
+    const overlay = new fabric.Rect({
+        fill: new fabric.Pattern({
+            source: text.toCanvasElement(),
+        }),
+    })
+
+    canvasEditions.forEach(function (canvas) {
+        overlay.height = canvas.height
+        overlay.width = canvas.width
+
+        canvas.objectCaching = false
+        canvas.setOverlayImage(overlay, canvas.renderAll.bind(canvas), {
+            objectCaching: false
+        })
+    })
+}
+
+
+function updateFlatten() {
+    let flatten = Boolean(document.querySelector('input[name=watermark]').value);
+
+    flatten = flatten || canvasEditions.some(function (canvas) {
+        return canvas.getObjects().some(function (object) {
+            return object.type === "rect"
+        })
+    })
+
+    document.querySelector('input[name=flatten]').checked = flatten;
+    if(document.getElementById('save_flatten_indicator')) {
+        document.getElementById('save_flatten_indicator').classList.toggle('invisible', !flatten);
+    }
+}
 
 function setIsChanged(changed) {
     hasModifications = changed
@@ -507,8 +571,20 @@ function createAndAddSvgInCanvas(canvas, item, x, y, height = null) {
         fill: penColor
       });
 
+      fabric.Textbox.prototype.customEnterAction = function (e) {
+          if (e.ctrlKey) {
+            this.insertChars('\n', undefined, this.selectionStart)
+            this.exitEditing();
+            this.enterEditing();
+            this.moveCursorRight(e);
+            return
+          }
+
+          this.exitEditing()
+      }
+
       addObjectInCanvas(canvas, textbox).setActiveObject(textbox);
-      textbox.keysMap[13] = "exitEditing";
+      textbox.keysMap[13] = "customEnterAction";
       textbox.lockScalingFlip = true;
       textbox.scaleX = currentTextScale;
       textbox.scaleY = currentTextScale;
@@ -531,6 +607,23 @@ function createAndAddSvgInCanvas(canvas, item, x, y, height = null) {
 
         addObjectInCanvas(canvas, line).setActiveObject(line);
 
+        return;
+    }
+
+    if(item == 'rectangle') {
+        let rect = new fabric.Rect({
+          left: x,
+          top: y,
+          width: 200,
+          height: 100,
+          fill: '#000',
+          lockScalingFlip: true
+        });
+        rect.setControlsVisibility({ tl: false, tr: false, bl: false, br: false,})
+
+        addObjectInCanvas(canvas, rect).setActiveObject(rect);
+
+        updateFlatten();
         return;
     }
 
@@ -643,6 +736,8 @@ function resizePDF(scale = 'auto') {
             resizeTimeout = null;
         });
     });
+
+    updateWatermark();
 };
 
 function createEventsListener() {
@@ -775,11 +870,24 @@ function createEventsListener() {
 
         input.classList.remove('d-none')
         div.classList.add('d-none')
-        input.querySelector('input').focus()
+        input.querySelector('input[type=text]').focus()
     })
-    document.querySelector('input[name=watermark]')?.addEventListener('keyup', function (e) {
+
+    document.querySelector('input[name=watermark]')?.addEventListener('keyup', debounce(function (e) {
         setIsChanged(hasModifications || !!e.target.value)
-    })
+        updateFlatten();
+        updateWatermark();
+    }, 750))
+
+    document.querySelector('input[name=watermark]')?.addEventListener('change', function (e) {
+        setIsChanged(hasModifications || !!e.target.value)
+        updateFlatten();
+        updateWatermark();
+    });
+
+    document.querySelector('#watermark-color-picker')?.addEventListener('change', function (e) {
+        document.querySelector('input[name=watermark]').dispatchEvent(new Event("change"));
+    });
 
     if(document.querySelector('#alert-signature-help')) {
         document.getElementById('btn-signature-help').addEventListener('click', function(event) {
@@ -793,7 +901,16 @@ function createEventsListener() {
     }
 
     if(document.getElementById('save')) {
-        document.getElementById('save').addEventListener('click', function(event) {
+        document.getElementById('save').addEventListener('click', async function(event) {
+            if(!pdfHash) {
+                event.preventDefault()
+            }
+
+            let previousScale = currentScale;
+            if(currentScale != defaultScale) {
+                resizePDF(defaultScale)
+                while(!renderComplete) { }
+            }
             let dataTransfer = new DataTransfer();
             canvasEditions.forEach(function(canvasEdition, index) {
                 dataTransfer.items.add(new File([canvasEdition.toSVG()], index+'.svg', {
@@ -801,6 +918,26 @@ function createEventsListener() {
                 }));
             })
             document.getElementById('input_svg').files = dataTransfer.files;
+            if(previousScale != currentScale) {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(resizePDF(previousScale), 100);
+            }
+
+            if(!pdfHash) {
+                startProcessingMode(this)
+                const formData = new FormData(this.form)
+                const response = await fetch(this.form.action, {
+                    method: "POST",
+                    body: formData
+                })
+
+                const blob = await response.blob()
+                const filename = response.headers.get('Content-Disposition').split('"')[1]
+                await download(blob, filename)
+                await storeFileInCache(blob, formData.get('pdf').name)
+                endProcessingMode(this)
+            }
+
             hasModifications = false;
         });
     }
@@ -830,6 +967,9 @@ function createEventsListener() {
 
     document.getElementById('save_mobile').addEventListener('click', function(event) {
         document.getElementById('save').click();
+
+        event.preventDefault();
+        return false;
     });
 
     document.getElementById('btn-svg-pdf-delete').addEventListener('click', function(event) {
@@ -948,6 +1088,10 @@ function createEventsListener() {
         storePenColor(penColorPicker.value)
     })
 
+    document.getElementById('color-picker').addEventListener('click', function(event) {
+        penColorPicker.click();
+    })
+
     window.addEventListener('beforeunload', function(event) {
         if(!hasModifications) {
             return;
@@ -978,7 +1122,7 @@ function createSignaturePad() {
         let data = new FormData();
         data.append('file', file);
         uploadSVG(data);
-    }), 500);
+    }, 500));
 };
 
 async function getPDFBlobFromCache(cacheUrl) {
@@ -1030,8 +1174,9 @@ async function pageUpload() {
     document.getElementById('input_pdf_upload').focus();
     document.getElementById('input_pdf_upload').addEventListener('change', async function(event) {
         if(await canUseCache()) {
-            storeFileInCache();
-            history.pushState({}, '', '/signature#'+document.getElementById('input_pdf_upload').files[0].name);
+            const file = document.getElementById('input_pdf_upload').files[0]
+            storeFileInCache(file, file.name);
+            history.pushState({}, '', '/signature#'+file.name);
         }
         pageSignature(null);
     });
@@ -1141,55 +1286,125 @@ function storePenColor(color) {
     penColor = color
     penColorPicker.value = color
     localStorage.setItem('penColor', penColor)
+    document.getElementById('color-picker').style.backgroundColor = penColor;
+    if(penColor != "#000000") {
+        document.getElementById('color-picker').style.opacity = 1;
+    } else {
+        document.getElementById('color-picker').style.opacity = 0.25;
+    }
+
 }
 
 const toolBox = (function () {
-    const _coloricon = document.createElement('img')
-          _coloricon.src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-palette" viewBox="0 0 16 16"><path d="M8 5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3m4 3a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3M5.5 7a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0m.5 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/><path d="M16 8c0 3.15-1.866 2.585-3.567 2.07C11.42 9.763 10.465 9.473 10 10c-.603.683-.475 1.819-.351 2.92C9.826 14.495 9.996 16 8 16a8 8 0 1 1 8-8m-8 7c.611 0 .654-.171.655-.176.078-.146.124-.464.07-1.119-.014-.168-.037-.37-.061-.591-.052-.464-.112-1.005-.118-1.462-.01-.707.083-1.61.704-2.314.369-.417.845-.578 1.272-.618.404-.038.812.026 1.16.104.343.077.702.186 1.025.284l.028.008c.346.105.658.199.953.266.653.148.904.083.991.024C14.717 9.38 15 9.161 15 8a7 7 0 1 0-7 7"/></svg>'
+    let _elSelected
 
-    function _renderIcon(icon) {
-        return function renderIcon(ctx, left, top, styleOverride, fabricObject) {
-            const size = this.cornerSize;
-            ctx.save();
-            ctx.translate(left, top);
-            ctx.rotate(fabric.util.degreesToRadians(fabricObject.angle));
-            ctx.drawImage(icon, -size/2, -size/2, size, size);
-            ctx.restore();
+    const _elToolbox = document.createElement('div')
+          _elToolbox.id = 'toolbox'
+          _elToolbox.classList.add('position-absolute', 'border', 'p-1', 'bg-body-secondary', 'shadow-sm', 'ms-3', 'mt-3', 'd-none', 'd-md-block', 'user-select-none')
+          _elToolbox.style['z-index'] = 1030
+          _elToolbox.style.width = 'max-content'
+
+    const _elToolboxElements = document.querySelector("#toolbox-elements-template").content.cloneNode(true)
+          _elToolbox.appendChild(_elToolboxElements)
+
+    _elToolbox.addEventListener('click', function (e) {
+        e.preventDefault()
+        target = e.target
+
+        el = target.closest("[data-action]")
+        if (el) {
+            switch (el.dataset.action) {
+                case "changeColor":
+                    _changeColor(); break;
+                case "delete":
+                    _delete(); break;
+                case "copy":
+                    _copy(); break;
+                case "duplicate":
+                    _duplicate(); break;
+            }
         }
-    }
+    })
 
-    function _changeColor(eventData, transform) {
-        const target = transform.target;
+    function _changeColor() {
         const _colorpicker = document.createElement('input')
               _colorpicker.setAttribute('type', 'color')
               _colorpicker.value = penColor
 
         _colorpicker.addEventListener('input', function (e) {
-            target.set({ fill: e.target.value })
-            target.canvas.requestRenderAll()
-            storePenColor(e.target.value)
+            _elSelected.set({ fill: e.target.value })
+            _elSelected.canvas.requestRenderAll()
+            if(_elSelected.type != "rect") {
+                storePenColor(e.target.value)
+            }
         })
 
         _colorpicker.click()
         _colorpicker.remove()
     }
 
-    function init(el) {
-        colorControl = new fabric.Control({
-            x: 0.5,
-            y: -0.5,
-            offsetY: -16,
-            offsetX: 16,
-            cursorStyle: 'pointer',
-            mouseUpHandler: _changeColor,
-            render: _renderIcon(_coloricon),
-            cornerSize: 24
+    function _copy() {
+        _elSelected.clone(function (clonedItem) {
+            clonedItem.top -= 20;
+            clonedItem.left += 20;
+            addObjectInCanvas(_elSelected.canvas, clonedItem).setActiveObject(clonedItem)
+        })
+    }
+
+    function _duplicate() {
+        canvasEditions.forEach(function (canvas) {
+            if  (_elSelected.canvas === canvas) {
+                return
+            }
+
+            _elSelected.clone(function (clonedItem) {
+                addObjectInCanvas(canvas, clonedItem)
+            })
         })
 
-        el.controls.color = colorControl
+    }
+
+    function _delete() {
+        deleteActiveObject()
+        reset()
+    }
+
+    function init(el) {
+        if (_elToolbox) {
+            reset()
+        }
+
+        _elSelected = el
+        const container = document.getElementById('container-pages')
+        container.appendChild(_elToolbox)
+
+        const xCoords = _elSelected.getCoords().map((c) => c.x)
+        const yCoords = _elSelected.getCoords().map((c) => c.y)
+
+        _elToolbox.style.left = (
+            Math.min(...xCoords)              // on sélectionne le coin le plus à gauche
+            + _elSelected.canvas._offset.left // décalage du canvas dans le viewport
+            + (
+                Math.max(...xCoords)      // on sélectionne le coin le plus à droite
+              - Math.min(...xCoords)      // on sélectionne le coin le plus à gauche
+            ) / 2                         // pour calculer la largeur et avoir le centre
+            - _elToolbox.offsetWidth / 2  // centre de la toolbox
+            - +window.getComputedStyle(_elToolbox).getPropertyValue("margin-left").replace('px', '')
+        ) + 'px'
+        _elToolbox.style.top = (
+            Math.max(...yCoords)             // on sélectionne le coin le plus bas
+            + _elSelected.canvas._offset.top // hauteur du canvas dans le viewport
+            + container.scrollTop            // haut du container
+        ) + 'px'
+    }
+
+    function reset() {
+        _elSelected = null
+        _elToolbox.remove()
     }
 
     return {
-        init: init
+        init: init,
+        reset: reset
     }
 })()

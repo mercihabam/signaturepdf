@@ -22,7 +22,7 @@
                   <input id="input_pdf_upload" placeholder="<?php echo _("Choose a PDF"); ?>" class="form-control form-control-lg" type="file" accept=".pdf,application/pdf,image/png,image/jpeg" multiple="true" />
                   <p class="mt-2 small fw-light text-dark">&nbsp;</p>
                   <?php if($PDF_DEMO_LINK): ?>
-                      <p class="mt-4"><a class="link-opacity-75 link-primary link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover small" href="#<?php echo $PDF_DEMO_LINK ?>"><?php echo _("Test with a demo PDF") ?></a></p>
+                      <p class="mt-4"><a id="demo_link" class="link-opacity-75 link-primary link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover small" href="#<?php echo $PDF_DEMO_LINK ?>"><?php echo _("Test with a demo PDF") ?></a></p>
                   <?php endif; ?>
                 </div>
             </div>
@@ -63,7 +63,7 @@
                         <button id="btn_rotate_select" disabled="disabled" type="button" class="btn btn-sm btn-outline-secondary"><?php echo sprintf(_("%s Rotate 90°"), '<i class="bi bi-arrow-clockwise"></i>'); ?></button>
                         <button id="btn_drag_select" disabled="disabled" type="button" class="btn btn-sm btn-outline-secondary"><?php echo sprintf(_("%s Move"), '<i class="bi bi-arrows-move"></i>'); ?></button>
                         <button id="btn_delete_select" disabled="disabled" type="button" class="btn btn-sm btn-outline-secondary"><?php echo sprintf(_("%s Delete"), '<i class="bi bi-trash"></i>'); ?></button>
-                        <button id="save-select" class="btn btn-sm btn-outline-secondary" disabled="disabled" form="form_pdf" type="submit"><?php echo sprintf(_("%s Extract and download"), '<i class="bi bi-download"></i>'); ?></button>
+                        <button id="btn_extract_select" class="btn btn-sm btn-outline-secondary" disabled="disabled" form="form_pdf" type="submit"><?php echo sprintf(_("%s Extract and download"), '<i class="bi bi-download"></i>'); ?></button>
                     </div>
                     <div class="card-footer d-none small text-center p-1 border-primary bg-primary bg-opacity-25"><a id="btn_cancel_select_footer" type="button" aria-label="Close" style="text-decoration: none;" class="text-primary"><?php echo sprintf(_("%s Cancel selection"), '<i class="bi bi-x-lg"></i>'); ?></a></div>
                 </div>
@@ -73,7 +73,15 @@
                         <input id="input_pdf" name="pdf[]" type="file" class="d-none" />
                         <input id="input_pages" type="hidden" value="" name="pages" />
                         <div id="btn_container" class="d-grid gap-2 mt-2">
+                            <button type="button" class="btn btn-light btn text-start border position-relative mb-2" data-bs-toggle="modal" data-bs-target="#modalPrintable">
+                                <i class="bi bi-gear position-absolute top-50 end-0 translate-middle-y pe-3 "></i>
+                                <small><?php echo _("Printing options") ?></small>
+                                <div id="printable_paper_size_infos" class="text-muted small clamp-2-lines"></div>
+                                <div id="printable_formatting_infos" class="fw-bold small"></div>
+                            </button>
+
                             <button class="btn btn-primary" type="submit" id="save"><?php echo sprintf(_("%s Download the full PDF"), '<i class="bi bi-download"></i>'); ?></button>
+                            <button id="save_select" class="btn btn-outline-primary d-none" type="submit"><i class="bi bi-download"></i> <?php echo _("Download the selection"); ?></button>
                         </div>
                     </form>
                 </div>
@@ -102,7 +110,7 @@
                 <button class="btn btn-primary" type="submit" id="save_mobile"><?php echo sprintf(_("%s Download the full PDF"), '<i class="bi bi-download"></i>'); ?></button>
             </div>
             <div id="bottom_bar_action_selection" class="d-grid gap-2 d-none">
-                <button id="save-select_mobile" class="btn btn-outline-primary" type="submit" form="form_pdf"><i class="bi bi-download"></i> <?php echo _("Download the selection"); ?></button>
+                <button id="save_select_mobile" class="btn btn-outline-primary" type="submit" form="form_pdf"><i class="bi bi-download"></i> <?php echo _("Download the selection"); ?></button>
             </div>
         </div>
     </div>
@@ -111,9 +119,83 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h1 class="modal-title fs-5" id="exampleModalLabel"><?php echo _("PDF documents"); ?></h1>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php echo _("Close") ?>"></button>
                 </div>
                 <div class="modal-body">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal fade" id="modalPrintable" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h1 class="modal-title fs-5" id="exampleModalLabel"><?php echo _("Printing options"); ?></h1>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="<?php echo _("Close") ?>"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-floating">
+                      <select class="form-select" id="select_paper_format">
+                        <optgroup label="<?php echo _("Original format") ?>">
+                            <option id="select_paper_format_current" value="" selected></option>
+                        </optgroup>
+                        <optgroup label="<?php echo _("Most common formats") ?>">
+                            <option value="210x297xmm">A4 (210 × 297 mm)</option>
+                            <option value="8.5x11xin">Letter (8.5 × 11 in)</option>
+                        </optgroup>
+                        <optgroup label="<?php echo _("Other formats") ?>">
+                            <option value="841x1189xmm">A0 (841 × 1189 mm)</option>
+                            <option value="594x841xmm">A1 (594 × 841 mm)</option>
+                            <option value="420x594xmm">A2 (420 × 594 mm)</option>
+                            <option value="297x420xmm">A3 (297 × 420 mm)</option>
+                            <option value="210x297xmm">A4 (210 × 297 mm)</option>
+                            <option value="148x210xmm">A5 (148 × 210 mm)</option>
+                            <option value="105x148xmm">A6 (105 × 148 mm)</option>
+                            <option value="250x353xmm">B4 (250 × 353 mm)</option>
+                            <option value="176x250xmm">B5 (176 × 250 mm)</option>
+                            <option value="8.5x11xin">Letter (8.5 × 11 in)</option>
+                            <option value="8.5x14xin">Legal (8.5 × 14 in)</option>
+                            <option value="11x17xin">Tabloid (11 × 17 in)</option>
+                            <option value="custom"><?php echo _("Custom") ?></option>
+                        </optgroup>
+                      </select>
+                      <label for="select-format"><?php echo _("Paper size") ?></label>
+                    </div>
+                    <div id="bloc_size" class="row mt-3 d-none">
+                        <div class="col">
+                            <div class="form-floating">
+                              <input type="number" class="form-control" id="input_paper_width" value="">
+                              <label for="input_paper_width"><?php echo _("Width") ?></label>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-floating">
+                              <input type="number" class="form-control" id="input_paper_height" value="">
+                              <label for="input_paper_height"><?php echo _("Height") ?></label>
+                            </div>
+                        </div>
+                        <div class="col">
+                            <div class="form-floating">
+                              <select class="form-select" id="select_size_unit">
+                                <option value=""></option>
+                                <option value="mm">mm</option>
+                                <option value="in">in</option>
+                              </select>
+                              <label for="floatingInputGrid"><?php echo _("Unit") ?></label>
+                            </div>
+                        </div>
+                    </div>
+                    <hr class="d-none" />
+                    <div class="form-floating mt-3">
+                      <select class="form-select" id="select_formatting">
+                          <option value="" selected><?php echo _("Normal") ?></option>
+                          <option value="booklet"><?php echo _("Booklet") ?></option>
+                      </select>
+                      <label for="select-format"><?php echo _("Formatting") ?></label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="btn_printable_validate" type="button" class="btn btn-primary" data-bs-dismiss="modal"><?php echo _("Close") ?></button>
                 </div>
             </div>
         </div>

@@ -41,7 +41,7 @@
         </div>
     <?php endif; ?>
     <div style="height: 65px;" class="d-md-none"></div>
-    <div id="container-pages" class="col-12 pt-1 pb-1 text-center vh-100" dir="auto">
+    <div id="container-pages" class="col-12 pt-1 pb-1 text-center vh-100 position-relative" dir="auto">
     </div>
     <div style="height: 55px;" class="d-md-none"></div>
     <div class="offcanvas offcanvas-end show d-none d-md-block shadow-sm" data-bs-backdrop="false" data-bs-scroll="true" data-bs-keyboard="false" tabindex="-1" id="sidebarTools" aria-labelledby="sidebarToolsLabel">
@@ -83,14 +83,18 @@
                   <input type="radio" class="btn-check" id="radio_svg_check" data-height="18" name="svg_2_add" autocomplete="off" value="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iY3VycmVudENvbG9yIiBjbGFzcz0iYmkgYmktY2hlY2stbGciIHZpZXdCb3g9IjAgMCAxNiAxNiI+CiAgPHBhdGggZD0iTTEyLjczNiAzLjk3YS43MzMuNzMzIDAgMCAxIDEuMDQ3IDBjLjI4Ni4yODkuMjkuNzU2LjAxIDEuMDVMNy44OCAxMi4wMWEuNzMzLjczMyAwIDAgMS0xLjA2NS4wMkwzLjIxNyA4LjM4NGEuNzU3Ljc1NyAwIDAgMSAwLTEuMDYuNzMzLjczMyAwIDAgMSAxLjA0NyAwbDMuMDUyIDMuMDkzIDUuNC02LjQyNWEuMjQ3LjI0NyAwIDAgMSAuMDItLjAyMloiLz4KPC9zdmc+Cg==">
                   <label draggable="true" id="label_svg_check" class="btn btn-outline-secondary text-black text-start btn-svg" for="radio_svg_check"><?php echo sprintf(_("%s Check box"), '<i class="bi bi-check-square"></i>'); ?></label>
               </div>
-
               <?php if (! isset($hash)): ?>
+                  <div class="d-grid gap-2 mb-2 list-item-add">
+                      <input type="radio" class="btn-check" id="radio_svg_rectangle" name="svg_2_add" autocomplete="off" value="rectangle" data-svg="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNiIgaGVpZ2h0PSIxNiIgZmlsbD0iY3VycmVudENvbG9yIiBjbGFzcz0iYmkgYmktYm91bmRpbmctYm94IiB2aWV3Qm94PSIwIDAgMTYgMTYiPg0KICA8cGF0aCBkPSJNNSAyVjBIMHY1aDJ2NkgwdjVoNXYtMmg2djJoNXYtNWgtMlY1aDJWMGgtNXYyem02IDF2MmgydjZoLTJ2Mkg1di0ySDNWNWgyVjN6bTEtMmgzdjNoLTN6bTMgMTF2M2gtM3YtM3pNNCAxNUgxdi0zaDN6TTEgNFYxaDN2M3oiLz4NCjwvc3ZnPg==">
+                      <label draggable="true" id="label_svg_rectangle" class="btn btn-outline-secondary text-black text-start btn-svg" for="radio_svg_rectangle"><i class="bi bi-bounding-box"></i> <?php echo _("Redaction area"); ?></label>
+                  </div>
                   <div class="input-watermark-placeholder btn btn-outline-secondary w-100 text-start text-dark">
                     <span class="bi bi-droplet-half" id="watermark-addon"></span> <?php echo _("Watermark") ?>
                   </div>
-                  <div class="input-group d-none">
+                  <div class="input-group d-none position-relative">
                       <span class="input-group-text border-secondary"><i class="bi bi-droplet-half"></i></span>
-                      <input form="form_pdf" type="text" class="form-control border-secondary" name="watermark" placeholder="<?php echo _("Watermark") ?>" aria-label="Watermark" aria-describedby="watermark-addon" maxlength="30">
+                      <input type="color" id="watermark-color-picker" class="form-control form-control-color" value="#828282">
+                      <input form="form_pdf" type="text" class="form-control border-secondary" name="watermark" placeholder="<?php echo _("Watermark") ?>" aria-label="Watermark" aria-describedby="watermark-addon">
                   </div>
               <?php endif ?>
 
@@ -107,8 +111,9 @@
                   <form id="form_pdf" action="<?php echo $REVERSE_PROXY_URL; ?>/sign" method="post" enctype="multipart/form-data" class="d-none d-sm-none d-md-block">
                         <input id="input_pdf" name="pdf" type="file" class="d-none" />
                         <input id="input_svg" name="svg[]" type="file" class="d-none" />
-                        <button class="btn btn-primary w-100 mt-2" disabled="disabled" type="submit" id="save"><i class="bi bi-download"></i> <?php echo _("Download the signed PDF"); ?></button>
-                  </form>
+                        <input name="flatten" type="checkbox" value="1" class="d-none" />
+                        <button class="btn btn-primary w-100 mt-2 w-100" disabled="disabled" type="submit" id="save"><i class="bi bi-download"></i> <?php echo _("Download the signed PDF"); ?> <i id="save_flatten_indicator" class="bi bi-layers-half opacity-50 float-end invisible" title="<?php echo _("The PDF will be flattened") ?>"></i></button>
+                </form>
                 <?php elseif(!isset($noSharingMode)): ?>
                   <div class="d-none d-sm-none d-md-block position-relative">
                       <a id="btn-signature-help" class="position-absolute top-0 end-0 text-dark" href="" style="z-index: 5;"><i class="bi bi-question-circle"></i></a>
@@ -127,6 +132,7 @@
               </div>
             </div>
         </div>
+        <button id="color-picker" class="shadow-sm" title="Changer la couleur de l'encre"><i class="bi bi-droplet-fill"></i></button>
         <div class="position-fixed top-0 start-0 bg-white w-100 p-2 shadow-sm d-md-none">
             <div class="d-grid gap-2">
             <button id="btn_svn_select" class="btn btn-light btn-lg" data-bs-toggle="offcanvas" data-bs-target="#sidebarTools" aria-controls="sidebarTools"><?php echo sprintf(_("%s Select a signature"), '<i class="bi bi-hand-index"></i>'); ?></button>
@@ -283,6 +289,17 @@
         </div>
     </div>
     <?php endif; ?>
+    <template id="toolbox-elements-template">
+        <div class="toolbox-action" data-action="changeColor" title="<?php echo _("Change the color of the selected element") ?>"><i class="bi bi-droplet-fill"></i></div>
+        <div class="toolbox-action dropdown" title="<?php echo _("Duplicate the element") ?>">
+            <span class="text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="inside"><i class="bi bi-copy mx-1"></i></span>
+            <ul class="dropdown-menu shadow-sm bg-body-secondary">
+                <li><a class="dropdown-item" data-action="duplicate"><?php echo _("Duplicate on each page") ?></a></li>
+                <li><a class="dropdown-item" data-action="copy"><?php echo _("Duplicate") ?></a></li>
+            </ul>
+        </div>
+        <div class="toolbox-action" data-action="delete" title="<?php echo _("Delete the element") ?>"><i class="bi bi-trash3"></i></div>
+    </template>
     <?php $loadJs = ['pdf.js' => true]; include('components/common.html.php'); ?>
     <script src="<?php echo $REVERSE_PROXY_URL; ?>/vendor/fabric.min.js?5.4.0"></script>
     <script src="<?php echo $REVERSE_PROXY_URL; ?>/vendor/signature_pad.umd.min.js?5.0.3"></script>
@@ -300,6 +317,34 @@
     <?php if(isset($hash)): ?>
     pdfHash = "<?php echo $hash ?>";
     <?php endif; ?>
+
+    <?php if(Flash::instance()->hasKey('adminKey')): ?>
+        localStorage.setItem(pdfHash+'.adminKey', '<?php echo Flash::instance()->getKey('adminKey') ?>')
+    <?php endif; ?>
+
+    const adminKey = localStorage.getItem(pdfHash+'.adminKey')
+    if (adminKey) {
+        const icon = document.createElement('i')
+        icon.classList.add('float-end', 'bi', 'bi-trash3')
+        icon.style.cursor = 'pointer'
+        document.getElementById('text_document_name').appendChild(icon)
+
+        icon.addEventListener('click', async function () {
+            if (confirm("<?php echo _("Are you sure you want to delete this PDF and the associated signatures?") ?>")) {
+                try {
+                    const response = await fetch('<?php echo $REVERSE_PROXY_URL; ?>/signature/'+pdfHash+'/delete/'+adminKey);
+                    if (!response.ok) {
+                        throw new Error(`Response status: ${response.status}`);
+                    }
+
+                    localStorage.removeItem(pdfHash+'.adminKey')
+                    window.location.replace('<?php echo $REVERSE_PROXY_URL; ?>/signature')
+                } catch (error) {
+                    console.error(error.message);
+                }
+            }
+        })
+    }
 
     var trad = <?php echo json_encode([
         'Text to modify' => _('Text to modify')
