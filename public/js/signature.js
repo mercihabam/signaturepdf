@@ -624,6 +624,9 @@ function setIsChanged(changed) {
     if(document.getElementById('save_mobile')) {
         document.getElementById('save_mobile').toggleAttribute('disabled', !changed);
     }
+    if(document.getElementById('save_to_remote_mobile')) {
+        document.getElementById('save_to_remote_mobile').toggleAttribute('disabled', !changed);
+    }
     if(document.getElementById('btn_download')) {
         document.getElementById('btn_download').classList.toggle('btn-outline-dark', !changed);
         document.getElementById('btn_download').classList.toggle('btn-outline-secondary', changed);
@@ -1161,10 +1164,16 @@ function createEventsListener() {
             endProcessingMode(this)
             setIsChanged(false)
 
-            event.preventDefault();
-            return false;
-        })
-    }
+        event.preventDefault();
+        return false;
+    })
+    
+    document.getElementById('save_to_remote_mobile')?.addEventListener('click', function(event) {
+        document.getElementById('save_to_remote').click();
+
+        event.preventDefault();
+        return false;
+    });
 
     document.getElementById('btn-svg-pdf-delete').addEventListener('click', function(event) {
         deleteActiveObject();
