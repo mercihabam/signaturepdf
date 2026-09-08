@@ -630,9 +630,11 @@ function setIsChanged(changed) {
         document.getElementById('btn_share').classList.toggle('btn-outline-secondary', changed);
     }
 
-    document.getElementById('save_local').disabled = !changed;
-    document.getElementById('save_local').classList.toggle('btn-primary', changed);
-    document.getElementById('save_local').classList.toggle('btn-outline-primary', !changed);
+    if(document.getElementById('save_local')) {
+        document.getElementById('save_local').disabled = !changed;
+        document.getElementById('save_local').classList.toggle('btn-primary', changed);
+        document.getElementById('save_local').classList.toggle('btn-outline-primary', !changed);
+    }
     // document.getElementById('save_mobile_local').classList.toggle('btn-primary', changed);
     // document.getElementById('save_mobile_local').classList.toggle('btn-outline-primary', !changed);
 }
@@ -1126,26 +1128,28 @@ function createEventsListener() {
         return false;
     });
 
-    document.getElementById('save_local').addEventListener('click', async function (event) {
-        startProcessingMode(this)
-        let newPDF = await save(this);
-        if(window.location.hash && window.location.hash.match(/^\#dav/)) {
-            let headers = new Headers();
-            let davToken = await requestDavToken();
-            headers.set('Authorization', 'Basic ' + btoa(davToken));
-            await fetch(window.location.hash.replace('#dav:', '').replace(/\.pdf$/, '_signe.pdf'), {
-              method: 'PUT',
-              body: newPDF,
-              headers: headers
-            });
-        }
+    if(document.getElementById('save_local')) {
+        document.getElementById('save_local').addEventListener('click', async function (event) {
+            startProcessingMode(this)
+            let newPDF = await save(this);
+            if(window.location.hash && window.location.hash.match(/^\#dav/)) {
+                let headers = new Headers();
+                let davToken = await requestDavToken();
+                headers.set('Authorization', 'Basic ' + btoa(davToken));
+                await fetch(window.location.hash.replace('#dav:', '').replace(/\.pdf$/, '_signe.pdf'), {
+                  method: 'PUT',
+                  body: newPDF,
+                  headers: headers
+                });
+            }
 
-        endProcessingMode(this)
-        setIsChanged(false)
+            endProcessingMode(this)
+            setIsChanged(false)
 
-        event.preventDefault();
-        return false;
-    })
+            event.preventDefault();
+            return false;
+        })
+    }
 
     document.getElementById('btn-svg-pdf-delete').addEventListener('click', function(event) {
         deleteActiveObject();
